@@ -16,8 +16,6 @@
 # inherit from qcom-common
 include device/samsung/qcom-common/BoardConfigCommon.mk
 
-BUILD_BROKEN_DUP_RULES := true
-
 # Platform
 TARGET_BOARD_PLATFORM := msm8226
 TARGET_BOARD_PLATFORM_GPU := qcom-adreno305
@@ -51,11 +49,6 @@ TARGET_NEEDS_LEGACY_CAMERA_HAL1_DYN_NATIVE_HANDLE := true
 TARGET_USES_MEDIA_EXTENSIONS := true
 TARGET_USES_NON_TREBLE_CAMERA := true
 
-# Charger
-BOARD_BATTERY_DEVICE_NAME := "battery"
-BOARD_CHARGING_CMDLINE_NAME := "androidboot.mode"
-BOARD_CHARGING_CMDLINE_VALUE := "charger"
-
 # Dexpreopt
 ifeq ($(HOST_OS),linux)
   ifneq ($(TARGET_BUILD_VARIANT),eng)
@@ -64,18 +57,26 @@ ifeq ($(HOST_OS),linux)
   endif
 endif
 
+WITH_DEXPREOPT_DEBUG_INFO := false
+USE_DEX2OAT_DEBUG := false
+DONT_DEXPREOPT_PREBUILTS := true
+
 # Display
-OVERRIDE_RS_DRIVER := libRSDriver_adreno.so
+OVERRIDE_RS_DRIVER:= libRSDriver_adreno.so
 TARGET_ADDITIONAL_GRALLOC_10_USAGE_BITS := 0x2000U | 0x02000000U
 
+# Shader cache config options
+# Maximum size of the  GLES Shaders that can be cached for reuse.
+# Increase the size if shaders of size greater than 12KB are used.
+MAX_EGL_CACHE_KEY_SIZE := 12*1024
+
+# Maximum GLES shader cache size for each app to store the compiled shader
+# binaries. Decrease the size if RAM or Flash Storage size is a limitation
+# of the device.
+MAX_EGL_CACHE_SIZE := 2048*1024
+
 # Filesystem
-BOARD_ROOT_EXTRA_SYMLINKS := /data/tombstones:/tombstones
 TARGET_FS_CONFIG_GEN := device/samsung/msm8226-common/config.fs
-BOARD_ROOT_EXTRA_FOLDERS := \
-    firmware-modem \
-    firmware \
-    efs \
-    persist
 
 # HIDL
 DEVICE_MANIFEST_FILE := device/samsung/msm8226-common/manifest.xml
@@ -87,22 +88,20 @@ TARGET_KEYMASTER_SKIP_WAITING_FOR_QSEE := true
 # SELinux
 include device/samsung/msm8226-common/sepolicy/sepolicy.mk
 
-# Optimize
-#PRODUCT_SYSTEM_SERVER_COMPILER_FILTER := speed-profile
-#PRODUCT_ALWAYS_PREOPT_EXTRACTED_APK := true
-#PRODUCT_USE_PROFILE_FOR_BOOT_IMAGE := true
-#PRODUCT_DEX_PREOPT_BOOT_IMAGE_PROFILE_LOCATION := frameworks/base/config/boot-image-profile.txt
-#PRODUCT_MINIMIZE_JAVA_DEBUG_INFO := true
-#PRODUCT_ART_TARGET_INCLUDE_DEBUG_BUILD := false
-
 # Partitions
 TARGET_USERIMAGES_USE_EXT4 := true
 TARGET_USERIMAGES_USE_F2FS := true
 BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4
 BOARD_VOLD_EMMC_SHARES_DEV_MAJOR := true
+BOARD_ROOT_EXTRA_FOLDERS := efs firmware firmware-modem persist
+BOARD_ROOT_EXTRA_SYMLINKS := \
+    /data/tombstones:/tombstones
 
 # Netd
 TARGET_NEEDS_NETD_DIRECT_CONNECT_RULE := true
+
+# Power
+TARGET_USES_INTERACTION_BOOST := true
 
 # Properties
 TARGET_SYSTEM_PROP += device/samsung/msm8226-common/system.prop

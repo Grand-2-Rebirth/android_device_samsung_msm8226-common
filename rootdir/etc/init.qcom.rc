@@ -25,36 +25,35 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import init.qcom.power.rc
-import init.qcom.usb.rc
-import init.target.rc
+import /vendor/etc/init/hw/init.qcom.power.rc
+import /vendor/etc/init/hw/init.qcom.usb.rc
+import /vendor/etc/init/hw/init.target.rc
 
 on early-init
     mount debugfs debugfs /sys/kernel/debug
     chmod 0755 /sys/kernel/debug
     
     # Increase max readahead size to 512 KB
-    restorecon --recursive /sys/block/mmcblk0/queue
     write /sys/block/mmcblk0/queue/read_ahead_kb 512
     write /sys/block/mmcblk0/queue/scheduler noop
 
     write /sys/block/zram0/comp_algorithm lz4    
 
+    mkdir /persist 0771 system system
+
+    symlink /data/tombstones /tombstones
+
     # Set permissions so radio can read
     chmod 0444 /proc/cmdline   
 
 on init
-    # Support legacy paths
-    symlink /sdcard /mnt/sdcard
-    symlink /sdcard /storage/sdcard0
-    
     write /proc/sys/vm/page-cluster 0
 
 on fs
     wait /dev/block/platform/soc.0/${ro.boot.bootdevice}
     symlink /dev/block/platform/soc.0/${ro.boot.bootdevice} /dev/block/bootdevice
     
-    mount_all /vendor/etc/fstab.qcom
+    mount_all /vendor/etc/fstab.qcom --early
     swapon_all /vendor/etc/fstab.qcom
 
     restorecon_recursive /efs
@@ -64,18 +63,32 @@ on fs
 
     # Kickstart the Wireless subsystem
     write /dev/wcnss_wlan 1
-    
+
     # Adaptive LMK
     write /sys/module/lowmemorykiller/parameters/enable_adaptive_lmk 1
-    write /sys/module/lowmemorykiller/parameters/vmpressure_file_min 53059 
+    write /sys/module/lowmemorykiller/parameters/vmpressure_file_min 53059
+
+    # GnssConfiguration doesn't actually look at gps.conf, just the debug file
+    mount none /system/etc/gps.conf /system/etc/gps_debug.conf bind
+    
+    # Start HW service manager early
+    start hwservicemanager
+
+on late-fs
+    # Start services for bootanim
+    start servicemanager
+    start configstore-hal-1-0
+    start surfaceflinger
+    start bootanim
+    
+    start gralloc-2-0
+
+    # Mount RW partitions which need run fsck
+    mount_all /vendor/etc/fstab.qcom --late
     
 on post-fs    
     # Allow writing to the kernel trace log.
-    chmod 0222 /sys/kernel/debug/tracing/trace_marker
-    
-    # avoid USB crash
-    setprop persist.adb.nonblocking_ffs 0
-    setprop ro.adb.nonblocking_ffs 0
+    chmod 0222 /sys/kernel/debug/tracing/trace_marker    
 
 on post-fs-data
     mkdir /data/misc/bluetooth 0770 bluetooth bluetooth
@@ -155,9 +168,6 @@ on post-fs-data
     # Create directory for FOTA
     mkdir /data/fota 0771
     chown system system /data/fota
-
-    # Create /data/time folder for time-services
-    mkdir /data/time/ 0700 system system
 
     mkdir /data/bluetooth 0770 bluetooth bluetooth
     # Enable the setgid bit on the directory
@@ -263,7 +273,7 @@ on boot
     setprop ro.bt.bdaddr_path "/efs/bluetooth/bt_addr"
     chown bluetooth net_bt_stack ro.bt.bdaddr_path
     chown radio net_bt_stack /efs/bluetooth/bt_addr
-    chmod 0755 /efs/bluetooth/bt_addr
+    chmod 0640 /efs/bluetooth/bt_addr
     restorecon_recursive /efs/bluetooth
 
     # IMEI
@@ -383,6 +393,8 @@ on boot
     chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/boost
     chown system system /sys/devices/system/cpu/cpufreq/interactive/boostpulse
     chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/boostpulse
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/input_boost
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/input_boost
     chown system system /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
     chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
     chown system system /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
@@ -421,6 +433,10 @@ on boot
     # Adjust YUV to RGB Conversion(CSC_Conversion)
     chown system media_rw /sys/class/graphics/fb0/csc_cfg
     chmod 0660 /sys/class/graphics/fb0/csc_cfg
+
+    # MDP idle notifier
+    chown system graphics /sys/class/graphics/fb0/idle_time
+    chmod 0664 /sys/class/graphics/fb0/idle_time
 
      #OTG Test
     chown system radio /sys/class/host_notify/usb_otg/booster
@@ -581,6 +597,7 @@ service adsprpcd /vendor/bin/adsprpcd
 
 service charger /system/bin/charger
     class charger
+    critical
     user system
     group system graphics input
     capabilities SYS_BOOT
@@ -624,7 +641,7 @@ service mpdecision /vendor/bin/mpdecision --avg_comp
 service qcamerasvr /vendor/bin/mm-qcamera-daemon
     class main
     user camera
-    group camera system inet input graphics bluetooth
+    group camera system inet input graphics bluetooth gps
 
 service qmuxd /vendor/bin/qmuxd
     class core
@@ -655,12 +672,6 @@ service thermal-engine /vendor/bin/thermal-engine -c /vendor/etc/thermal-engine-
    socket thermal-recv-client stream 0660 system system
    socket thermal-recv-passive-client stream 0666 system system
    group root   
-
-service time_daemon /vendor/bin/time_daemon
-    capabilities SYS_TIME
-    class late_start
-    user system
-    group net_raw
 
 service wcnss-service /system/bin/wcnss_service
     class late_start

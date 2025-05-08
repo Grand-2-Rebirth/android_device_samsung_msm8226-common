@@ -74,6 +74,14 @@ void gsm_properties(const char default_network[],
     property_set("telephony.lteOnGsmDevice", lteOnGsmDevice);
 }
 
+void wifi_properties(char const carrier[],
+        char const noril[])
+{
+    // Dynamic Wi-Fi Properties
+    property_set("ro.carrier", carrier);
+    property_set("ro.radio.noril", noril);
+}
+
 void property_override(char const prop[], char const value[], bool add)
 {
     auto pi = (prop_info *) __system_property_find(prop);
@@ -92,3 +100,11 @@ void set_ro_product_prop(char const prop[], char const value[])
         property_override(prop_name.c_str(), value, false);
     }
 }
+
+void set_ro_build_prop(char const prop[], char const value[])
+{
+    for (const auto &source : ro_product_props_default_source_order) {
+        auto prop_name = "ro." + source + "build." + prop;
+        property_override(prop_name.c_str(), value, false);
+    }
+};

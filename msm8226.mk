@@ -13,13 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Always preopt extracted APKs to prevent extracting out of the APK
-# for gms modules.
-PRODUCT_ALWAYS_PREOPT_EXTRACTED_APK := true
-
-# System Server
-PRODUCT_SYSTEM_SERVER_COMPILER_FILTER := speed-profile
-
 # Overlays
 DEVICE_PACKAGE_OVERLAYS += \
     device/samsung/msm8226-common/overlay \
@@ -53,10 +46,13 @@ PRODUCT_COPY_FILES += \
 
 # Audio
 PRODUCT_PACKAGES += \
-    android.hardware.audio@2.0-impl \
-    android.hardware.audio.effect@2.0-impl \
-    audio_policy.msm8226 \
+    android.hardware.audio@2.0-service \
+    android.hardware.audio@5.0-impl \
+    android.hardware.audio.effect@5.0-impl \
+    android.hardware.audio.service \
+    android.hardware.bluetooth.audio@2.0-impl \
     audio.a2dp.default \
+    audio.bluetooth.default \
     audio.primary.msm8226 \
     audio.r_submix.default \
     audio.usb.default \
@@ -69,13 +65,11 @@ PRODUCT_PACKAGES += \
 # Bluetooth
 PRODUCT_PACKAGES += \
     android.hardware.bluetooth@1.0-impl \
+    android.hardware.bluetooth@1.0-service \
     libbt-vendor
 
 # Boot animation
 TARGET_BOOTANIMATION_HALF_RES := true
-
-# Dalvik
-$(call inherit-product, frameworks/native/build/phone-xhdpi-2048-dalvik-heap.mk)
 
 # Display
 PRODUCT_PACKAGES += \
@@ -84,6 +78,7 @@ PRODUCT_PACKAGES += \
     android.hardware.graphics.composer@2.1-impl \
     android.hardware.graphics.mapper@2.0-impl-2.1 \
     android.hardware.memtrack@1.0-impl \
+    android.hardware.memtrack@1.0-service \
     copybit.msm8226 \
     gralloc.msm8226 \
     hwcomposer.msm8226 \
@@ -96,9 +91,6 @@ PRODUCT_PACKAGES += \
     camera.msm8226 \
     libxml2 \
     Snap
-
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/external_camera_config.xml:$(TARGET_COPY_OUT_VENDOR)/etc/external_camera_config.xml
 
 # DRM
 PRODUCT_PACKAGES += \
@@ -133,7 +125,9 @@ PRODUCT_COPY_FILES += \
 
 # Keymaster
 PRODUCT_PACKAGES += \
-    android.hardware.keymaster@3.0-impl
+    android.hardware.keymaster@3.0-impl \
+    android.hardware.keymaster@3.0-service \
+    keystore.msm8226
 
 # LiveDisplay
 PRODUCT_PACKAGES += \
@@ -149,9 +143,7 @@ PRODUCT_COPY_FILES += \
 
 # Offline Charger
 PRODUCT_PACKAGES += \
-    charger \
-    charger_res_images \
-    lineage_charger_res_images
+    charger_res_images
 
 # OMX
 PRODUCT_PACKAGES += \
@@ -178,8 +170,7 @@ PRODUCT_DEXPREOPT_SPEED_APPS += \
 
 # Ramdisk
 PRODUCT_PACKAGES += \
-    init.qcom.bt.sh \
-    init.ril.sh
+    init.qcom.bt.sh
 
 PRODUCT_PACKAGES += \
     init.qcom.power.rc \
@@ -187,7 +178,6 @@ PRODUCT_PACKAGES += \
     init.qcom.usb.rc \
     init.recovery.qcom.rc \
     ueventd.qcom.rc
-
 
 # RenderScript HAL
 PRODUCT_PACKAGES += \
@@ -199,7 +189,13 @@ PRODUCT_COPY_FILES += \
 
 # Sensors
 PRODUCT_PACKAGES += \
-    android.hardware.sensors@1.0-impl.samsung8226
+    android.hardware.sensors@1.0-impl.samsung8226 \
+    android.hardware.sensors@1.0-service.samsung8226
+
+# TimeKeep
+PRODUCT_PACKAGES += \
+    timekeep \
+    TimeKeep
 
 # Touch features
 PRODUCT_PACKAGES += \
